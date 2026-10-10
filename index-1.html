@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>StudyMind AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Readex+Pro:wght@500;600;700&display=swap">
+<style>
+/* Layout: one narrow column, notebook-grid ground. Intake card on top, tabbed results below (Arabic / English / mind map). */
+:root{
+  color-scheme:light; --bg:#F2F4F5; --surface:#FFFFFF; --ink:#14222B; --muted:#586972; --line:#D3DBDF;
+  --accent:#0B6E6A; --accent-ink:#FFFFFF; --hi:#FFE27A; --grid:rgba(20,34,43,.055);
+  --warn:#9A3412; --warn-bg:#FFF1E6;
+  --c1:#0B6E6A; --c2:#B45309; --c3:#4338CA; --c4:#BE185D; --c5:#4D7C0F;
+  --f-display:'Readex Pro','IBM Plex Sans Arabic',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans Arabic','Segoe UI',Tahoma,system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1418; --surface:#151E24; --ink:#E6EEF2; --muted:#93A5AF; --line:#263640;
+    --accent:#4FD1C5; --accent-ink:#06201E; --hi:#5C4F10; --grid:rgba(230,238,242,.045);
+    --warn:#FDBA74; --warn-bg:#2A1A10;
+    --c1:#4FD1C5; --c2:#F2A93B; --c3:#9AA5FF; --c4:#F48FB1; --c5:#A3D96B;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1418; --surface:#151E24; --ink:#E6EEF2; --muted:#93A5AF; --line:#263640;
+  --accent:#4FD1C5; --accent-ink:#06201E; --hi:#5C4F10; --grid:rgba(230,238,242,.045);
+  --warn:#FDBA74; --warn-bg:#2A1A10;
+  --c1:#4FD1C5; --c2:#F2A93B; --c3:#9AA5FF; --c4:#F48FB1; --c5:#A3D96B;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background-color:var(--bg); color:var(--ink);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+  font:400 16px/1.7 var(--f-body);
+  margin:0; padding-inline:16px; padding-block:calc(20px + env(safe-area-inset-top,0px)) calc(56px + env(safe-area-inset-bottom,0px));
+}
+.app{max-width:760px;margin-inline:auto;display:flex;flex-direction:column;gap:16px}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;align-items:center;gap:12px;padding-block:4px 2px}
+.mark{width:40px;height:40px;flex:none}
+.top h1{font:700 22px/1.1 var(--f-display);margin:0;letter-spacing:.01em;direction:ltr;text-align:start}
+.top p{margin:2px 0 0;color:var(--muted);font-size:14px;line-height:1.5}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card h2{font:600 17px/1.3 var(--f-display);margin:0}
+.pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.pick-btn{display:flex;align-items:center;gap:10px;text-align:start;background:var(--bg);border:1.5px dashed var(--line);border-radius:12px;padding:12px;min-height:64px;min-width:0}
+.pick-btn{position:relative;overflow:hidden}
+.pick-btn:hover{border-color:var(--accent)}
+.fin{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0;margin:0}
+.pick-btn svg{width:26px;height:26px;flex:none;color:var(--accent)}
+.pick-btn b{display:block;font-weight:600;line-height:1.3}
+.pick-btn small{display:block;color:var(--muted);font-size:13px;line-height:1.4}
+.files{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.files li{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:10px;padding:8px 10px;min-width:0}
+.files .tag{font:500 11px/1 var(--f-mono);letter-spacing:.06em;color:var(--accent-ink);background:var(--accent);border-radius:5px;padding:4px 6px;flex:none}
+.files .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;direction:ltr;text-align:start}
+.files .sz{font:400 12px/1 var(--f-mono);color:var(--muted);flex:none}
+.files .rm{border:0;background:transparent;width:32px;height:32px;border-radius:8px;color:var(--muted);font-size:20px;line-height:1;flex:none}
+.files .rm:hover{color:var(--ink);background:var(--line)}
+details.paste summary{cursor:pointer;color:var(--muted);font-size:14px;padding-block:2px}
+details.paste textarea{width:100%;min-height:110px;margin-top:8px;resize:vertical;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:15px}
+.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;min-height:50px;padding-inline:20px;font-weight:600;font-size:16px}
+.primary[disabled]{opacity:.5;cursor:default}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:10px;min-height:40px;padding-inline:14px;font-size:14px}
+.ghost:hover{border-color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.status{margin:0;font-size:14px;color:var(--muted);min-height:1.2em}
+.status.err{color:var(--warn);background:var(--warn-bg);border-radius:10px;padding:10px 12px}
+.bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:35%;background:var(--accent);border-radius:2px;animation:slide 1.3s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
+[dir="rtl"] .bar i{animation-name:slideR}
+@keyframes slideR{0%{transform:translateX(120%)}100%{transform:translateX(-320%)}}
+.fine{font-size:12.5px;color:var(--muted);margin:0;line-height:1.5}
+[hidden]{display:none!important}
+img{max-width:100%}
+.key{flex:1;min-width:0;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;font:400 14px/1.4 var(--f-mono);min-height:44px;direction:ltr;text-align:start}
+details.keybox summary{cursor:pointer;font:600 17px/1.3 var(--f-display)}
+details.keybox[open] summary{margin-bottom:12px}
+details.keybox .col{display:flex;flex-direction:column;gap:10px}
+
+.demo{display:flex;gap:8px;align-items:center;font:500 12px/1.4 var(--f-mono);color:var(--muted);letter-spacing:.02em}
+.demo::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--hi);border:1px solid var(--muted);flex:none}
+
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;gap:6px;background:var(--bg);padding-block:8px;border-bottom:1px solid var(--line)}
+.tab{flex:1;border:1px solid var(--line);background:var(--surface);border-radius:10px;min-height:44px;font-weight:600;font-size:15px;padding-inline:8px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.panel{display:flex;flex-direction:column;gap:14px;min-width:0}
+.note h3{font:700 21px/1.35 var(--f-display);margin:0;text-wrap:balance}
+.note h4{font:600 13px/1.2 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 0 0}
+.note[lang="ar"] h4{font-family:var(--f-display);letter-spacing:0;text-transform:none;font-size:15px}
+.note p.lead{margin:0;font-size:16.5px;max-width:65ch}
+.note ul,.note ol{margin:0;padding-inline-start:22px;display:flex;flex-direction:column;gap:8px;max-width:65ch}
+.note dl{margin:0;display:flex;flex-direction:column;gap:10px;max-width:65ch}
+.note dt{font-weight:600}
+.note dt mark{background:linear-gradient(transparent 52%,var(--hi) 52%);color:inherit;padding-inline:2px}
+.note dd{margin:0;color:var(--muted);font-size:15px}
+.note[lang="en"]{font-family:'IBM Plex Sans Arabic','Segoe UI',system-ui,sans-serif}
+
+.mm-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:var(--surface);min-height:40px;min-width:48px;padding-inline:12px;font-weight:600;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.mm-wrap{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:auto;height:min(64vh,520px);min-height:340px;padding:8px;-webkit-overflow-scrolling:touch}
+.mm-wrap svg{display:block;margin-inline:auto}
+.mm text{font:500 12.5px/1 var(--f-body);fill:var(--ink);pointer-events:none}
+.mm .root text{fill:var(--accent-ink)}
+.mm g[data-n]{cursor:pointer}
+.mm g[data-t]{cursor:pointer}
+.mm .tg text{font:600 13px/1 var(--f-mono)}
+.detail{display:flex;flex-direction:column;gap:8px;min-height:96px}
+.detail h3{font:600 17px/1.3 var(--f-display);margin:0}
+.detail p{margin:0;font-size:15px;max-width:65ch}
+.detail .deep{white-space:pre-wrap;border-top:1px solid var(--line);padding-top:10px;font-size:15px}
+.empty{color:var(--muted);font-size:15px;margin:0}
+@media (prefers-reduced-motion:reduce){.bar i{animation:none;width:100%}}
+</style>
+
+</head>
+<body>
+<div class="app" dir="rtl" lang="ar">
+  <header class="top">
+    <svg class="mark" viewBox="0 0 40 40" aria-hidden="true">
+      <rect x="1.5" y="1.5" width="37" height="37" rx="10" fill="var(--accent)"/>
+      <g stroke="var(--accent-ink)" stroke-width="2.2" stroke-linecap="round" fill="none">
+        <path d="M20 20 L11 12 M20 20 L29 12 M20 20 L20 31"/>
+      </g>
+      <circle cx="20" cy="20" r="4.2" fill="var(--accent-ink)"/>
+      <circle cx="11" cy="12" r="2.8" fill="var(--hi)"/>
+      <circle cx="29" cy="12" r="2.8" fill="var(--accent-ink)"/>
+      <circle cx="20" cy="31" r="2.8" fill="var(--accent-ink)"/>
+    </svg>
+    <div>
+      <h1>StudyMind AI</h1>
+      <p>من محاضرتك إلى شرح عربي وإنكليزي وخريطة ذهنية</p>
+    </div>
+  </header>
+
+  <section class="card" id="settings">
+    <details class="keybox" id="keyBox">
+      <summary>مفتاح Claude API</summary>
+      <div class="col">
+        <p class="fine">يحتاج التطبيق مفتاح API من console.anthropic.com ليشرح محاضراتك، وهو منفصل عن اشتراك Claude العادي. يُحفظ المفتاح على هذا الجوال فقط ولا يُرسل إلا إلى Anthropic.</p>
+        <div class="row">
+          <input id="apiKey" class="key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-..." aria-label="مفتاح API">
+          <button type="button" class="primary" id="saveKey" style="min-height:44px">حفظ</button>
+        </div>
+        <div class="row"><button type="button" class="ghost" id="clearKey">حذف المفتاح من الجوال</button></div>
+      </div>
+    </details>
+    <p class="status" id="keyStatus" role="status"></p>
+  </section>
+
+  <section class="card" id="intake" aria-labelledby="hAdd">
+    <h2 id="hAdd">أضف محاضرتك</h2>
+    <div class="pick">
+      <label class="pick-btn" id="btnPdf">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 14h6M9 17h4"/></svg>
+        <span><b>ملف PDF</b><small>محاضرة أو ملزمة</small></span>
+        <input id="inPdf" class="fin" type="file" accept="application/pdf,.pdf" multiple aria-label="اختيار ملف PDF">
+      </label>
+      <label class="pick-btn" id="btnImg">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-8 8"/></svg>
+        <span><b>صور المحاضرة</b><small>من المعرض أو الكاميرا</small></span>
+        <input id="inImg" class="fin" type="file" accept="image/*" multiple aria-label="اختيار صور المحاضرة">
+      </label>
+    </div>
+    <ul class="files" id="files" aria-live="polite"></ul>
+    <details class="paste">
+      <summary>أو الصق نص المحاضرة</summary>
+      <textarea id="pasted" placeholder="الصق هنا نص المحاضرة أو ملاحظاتك"></textarea>
+    </details>
+    <div class="row">
+      <button type="button" class="primary" id="run">اشرح وابنِ الخريطة</button>
+      <button type="button" class="ghost" id="stop" hidden>إيقاف</button>
+    </div>
+    <div class="bar" id="bar" hidden><i></i></div>
+    <p class="status" id="status" role="status"></p>
+    <p class="fine">تُرسل ملفاتك إلى Anthropic لتحليلها وتُحتسب من رصيد مفتاحك. الحد الأقصى 100 صفحة لكل PDF و10 صور.</p>
+  </section>
+
+  <section id="out" aria-label="النتيجة">
+    <div class="demo" id="demoBadge">مثال توضيحي. ارفع محاضرتك ليحل مكانه.</div>
+    <div class="tabs" role="tablist" aria-label="أقسام النتيجة">
+      <button class="tab" role="tab" id="tAr" aria-selected="true" aria-controls="pAr" data-tab="ar">العربية</button>
+      <button class="tab" role="tab" id="tEn" aria-selected="false" aria-controls="pEn" data-tab="en" dir="ltr">English</button>
+      <button class="tab" role="tab" id="tMap" aria-selected="false" aria-controls="pMap" data-tab="map">الخريطة</button>
+    </div>
+    <div style="height:14px"></div>
+    <div class="panel" id="pAr" role="tabpanel" aria-labelledby="tAr"><div class="card note" id="noteAr" lang="ar" dir="rtl"></div></div>
+    <div class="panel" id="pEn" role="tabpanel" aria-labelledby="tEn" hidden><div class="card note" id="noteEn" lang="en" dir="ltr"></div></div>
+    <div class="panel" id="pMap" role="tabpanel" aria-labelledby="tMap" hidden>
+      <div class="mm-tools">
+        <div class="seg" role="group" aria-label="لغة العقد">
+          <button type="button" id="mlAr" aria-pressed="true">ع</button>
+          <button type="button" id="mlEn" aria-pressed="false" dir="ltr">EN</button>
+        </div>
+        <div class="seg" role="group" aria-label="التكبير">
+          <button type="button" id="zOut" aria-label="تصغير">−</button>
+          <button type="button" id="zFit" aria-label="ملاءمة الشاشة">ملاءمة</button>
+          <button type="button" id="zIn" aria-label="تكبير">+</button>
+        </div>
+        <button type="button" class="ghost" id="exAll">فتح الكل</button>
+        <button type="button" class="ghost" id="coAll">طي الكل</button>
+      </div>
+      <div class="mm-wrap" id="mmWrap" dir="ltr"><p class="empty" id="mmEmpty">جارٍ تجهيز الخريطة…</p></div>
+      <div class="card detail" id="detail" aria-live="polite"></div>
+      <div class="row">
+        <button type="button" class="ghost" id="mapRetry" hidden>أعد بناء الخريطة</button>
+        <button type="button" class="ghost" id="save">نسخ الشرح والخريطة</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
+var PDF_WORKER="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+var STORE="studymind:last:v1";
+
+/* ---------- example content shown before the first upload ---------- */
+function N(ar,en,nar,nen,ch){var o={ar:ar,en:en,note_ar:nar,note_en:nen};if(ch)o.children=ch;return o}
+var EXAMPLE={
+  result:{
+    topic_ar:"البناء الضوئي",topic_en:"Photosynthesis",
+    ar:{
+      summary:"البناء الضوئي هو العملية التي تحوّل بها النباتات والطحالب ضوء الشمس والماء وثاني أكسيد الكربون إلى سكر الغلوكوز، وتطلق الأكسجين أثناء ذلك. تجري العملية داخل البلاستيدات الخضراء على مرحلتين: تفاعلات الضوء ثم تفاعلات الكربون المعروفة بدورة كالفن.",
+      key_points:[
+        "يلتقط الكلوروفيل الضوء الأحمر والأزرق ويعكس الأخضر، ولهذا تبدو الأوراق خضراء.",
+        "تفاعلات الضوء تحدث في أغشية الثايلاكويد وتنتج ATP وNADPH، ويتحرر الأكسجين من تحلل الماء.",
+        "دورة كالفن تحدث في الستروما، وتستخدم ATP وNADPH لتثبيت ثاني أكسيد الكربون وبناء الغلوكوز.",
+        "المعادلة العامة: 6CO₂ + 6H₂O + ضوء ← C₆H₁₂O₆ + 6O₂."
+      ],
+      terms:[
+        {term:"الكلوروفيل (Chlorophyll)",meaning:"صبغة خضراء تمتص الضوء داخل البلاستيدات الخضراء."},
+        {term:"الستروما (Stroma)",meaning:"السائل داخل البلاستيدة الذي تجري فيه دورة كالفن."},
+        {term:"ATP",meaning:"جزيء ينقل الطاقة ويستخدمه الكائن الحي في عملياته."}
+      ],
+      questions:["أين تحدث تفاعلات الضوء وما نواتجها؟","لماذا تبدو أغلب الأوراق خضراء؟","ما دور ثاني أكسيد الكربون في دورة كالفن؟"]
+    },
+    en:{
+      summary:"Photosynthesis is how plants and algae turn sunlight, water and carbon dioxide into glucose, releasing oxygen along the way. It happens inside chloroplasts in two stages: the light reactions, then the carbon-fixing Calvin cycle.",
+      key_points:[
+        "Chlorophyll absorbs red and blue light and reflects green, which is why leaves look green.",
+        "The light reactions run on thylakoid membranes, make ATP and NADPH, and release oxygen from split water.",
+        "The Calvin cycle runs in the stroma and uses ATP and NADPH to fix CO₂ into glucose.",
+        "Overall equation: 6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂."
+      ],
+      terms:[
+        {term:"Chlorophyll",meaning:"The green pigment that absorbs light inside chloroplasts."},
+        {term:"Stroma",meaning:"The fluid inside a chloroplast where the Calvin cycle takes place."},
+        {term:"ATP",meaning:"A molecule that carries usable energy for the cell."}
+      ],
+      questions:["Where do the light reactions happen, and what do they produce?","Why do most leaves look green?","What is the role of CO₂ in the Calvin cycle?"]
+    }
+  },
+  map:N("البناء الضوئي","Photosynthesis","عملية تحويل الضوء إلى طاقة كيميائية.","Converting light into chemical energy.",[
+    N("المدخلات","Inputs","ما تحتاجه النبتة لتبدأ العملية.","What the plant needs to start.",[
+      N("ضوء الشمس","Sunlight","مصدر الطاقة.","The energy source."),
+      N("الماء","Water","يُمتص بالجذور ويتحلل في تفاعلات الضوء.","Absorbed by roots, split in the light reactions."),
+      N("ثاني أكسيد الكربون","Carbon dioxide","يدخل من الثغور ويُثبّت في دورة كالفن.","Enters through stomata and is fixed in the Calvin cycle.")]),
+    N("تفاعلات الضوء","Light reactions","المرحلة الأولى وتحتاج الضوء مباشرة.","Stage one, needs light directly.",[
+      N("الثايلاكويد","Thylakoid","أغشية مكدسة داخل البلاستيدة.","Stacked membranes inside the chloroplast."),
+      N("ATP وNADPH","ATP and NADPH","ناقلان للطاقة تستخدمهما المرحلة التالية.","Energy carriers used by the next stage."),
+      N("تحرير الأكسجين","Oxygen release","ينتج من تحلل جزيئات الماء.","Comes from splitting water molecules.")]),
+    N("دورة كالفن","Calvin cycle","المرحلة الثانية وتبني السكر.","Stage two, builds sugar.",[
+      N("الستروما","Stroma","مكان حدوث الدورة.","Where the cycle takes place."),
+      N("تثبيت الكربون","Carbon fixation","ربط CO₂ بجزيء عضوي.","Attaching CO₂ to an organic molecule."),
+      N("بناء الغلوكوز","Glucose synthesis","تحويل المنتجات الوسيطة إلى سكر.","Turning intermediates into sugar.")]),
+    N("المخرجات","Outputs","نواتج العملية.","What the process produces.",[
+      N("الغلوكوز","Glucose","غذاء النبتة ووقودها.","Food and fuel for the plant."),
+      N("الأكسجين","Oxygen","يُطلق إلى الجو.","Released to the air.")])
+  ])
+};
+
+/* ---------- state ---------- */
+var sample=null,caps=null,downloads=null;
+var files=[],nextId=1,busy=false,ctl=null;
+var cur={result:EXAMPLE.result,map:EXAMPLE.map,demo:true,mapError:false};
+var mapLang="ar",zoom=1,selected=null,collapsed=new Set(),mapShown=false,fitted=false;
+
+/* ---------- helpers ---------- */
+function setStatus(t,err){var s=$("#status");s.textContent=t||"";s.className="status"+(err?" err":"")}
+function setBusy(b){
+  busy=b;$("#run").disabled=b;$("#stop").hidden=!b;$("#bar").hidden=!b;
+  ["inPdf","inImg"].forEach(function(i){$("#"+i).disabled=b});
+}
+function fmtSize(n){return n>=1048576?(n/1048576).toFixed(1)+" MB":Math.max(1,Math.round(n/1024))+" KB"}
+function errCopy(e){
+  var c=e&&e.code;
+  var m={
+    nokey:"أضف مفتاح Claude API أولاً من الأعلى.",
+    not_granted:"لم يُسمح لهذه الصفحة باستخدام Claude. أعد فتح الصفحة واختر السماح عند ظهور النافذة.",
+    sampling_disabled:"Claude غير متاح لهذا الحساب أو المؤسسة.",
+    rate_limited:"وصلت إلى حد الاستخدام مؤقتاً. انتظر قليلاً ثم اضغط الزر من جديد.",
+    session_expired:"انتهت الجلسة. سجّل الدخول من جديد.",
+    image_rejected:"تعذر قبول إحدى الصور. جرّب صوراً بصيغة JPG أو PNG بحجم أصغر.",
+    images_unavailable:"إرسال الصور غير متاح في هذا العرض. جرّب ملف PDF نصياً أو الصق النص.",
+    prompt_too_large:"المحتوى كبير جداً. جرّب عدداً أقل من الصفحات.",
+    refused:"رفض Claude هذا المحتوى. جرّب مادة دراسية أخرى.",
+    empty_completion:"لم يصل رد. اضغط الزر مرة ثانية.",
+    invalid_json:"جاء الرد بصيغة غير مفهومة. اضغط الزر مرة ثانية.",
+    nopdf:"تعذر تحميل قارئ PDF. تحقق من الاتصال أو استخدم الصور أو الصق النص.",
+    empty:"أضف ملف PDF أو صوراً أو الصق نصاً أولاً.",
+    unreadable:"لم أجد نصاً مقروءاً. إن كانت الصفحات صوراً فاستخدم زر صور المحاضرة."
+  };
+  if(c==="cancelled")return "تم الإيقاف.";
+  if(c==="apierr")return e.message;
+  return m[c]||"حدث خطأ غير متوقع. اضغط الزر مرة أخرى.";
+}
+function save(){
+  try{localStorage.setItem(STORE,JSON.stringify({result:cur.result,map:cur.map},function(k,v){return k&&k.charAt(0)==="_"?undefined:v}))}catch(e){}
+}
+function restore(){
+  try{
+    var s=JSON.parse(localStorage.getItem(STORE)||"null");
+    if(s&&s.result&&s.result.ar&&s.result.en){cur={result:s.result,map:s.map||null,demo:false,mapError:!s.map}}
+  }catch(e){}
+}
+
+/* ---------- file picking ---------- */
+function renderFiles(){
+  var ul=$("#files");
+  ul.innerHTML=files.map(function(f){
+    return '<li><span class="tag">'+(f.kind==="pdf"?"PDF":"IMG")+'</span><span class="nm">'+esc(f.file.name)+'</span><span class="sz">'+fmtSize(f.file.size)+'</span><button type="button" class="rm" data-rm="'+f.id+'" aria-label="إزالة الملف">×</button></li>';
+  }).join("");
+}
+function addFiles(list,kind){
+  Array.prototype.forEach.call(list,function(file){
+    if(files.length>=12)return;
+    files.push({id:nextId++,file:file,kind:kind});
+  });
+  renderFiles();
+}
+$("#inPdf").onchange=function(e){addFiles(e.target.files,"pdf");e.target.value=""};
+$("#inImg").onchange=function(e){addFiles(e.target.files,"img");e.target.value=""};
+$("#files").onclick=function(e){
+  var b=e.target.closest("[data-rm]");if(!b)return;
+  files=files.filter(function(f){return String(f.id)!==b.getAttribute("data-rm")});
+  renderFiles();
+};
+
+/* ---------- reading files, calling the Claude API ---------- */
+var KEY_STORE="studymind:key:v1";
+var MODEL="claude-sonnet-5-5";
+function getKey(){try{return localStorage.getItem(KEY_STORE)||""}catch(e){return ""}}
+function toBlob(canvas,q){return new Promise(function(r){canvas.toBlob(r,"image/jpeg",q)})}
+function b64(file){
+  return new Promise(function(res,rej){
+    var r=new FileReader();
+    r.onload=function(){res(String(r.result).split(",")[1])};
+    r.onerror=function(){rej({code:"unreadable"})};
+    r.readAsDataURL(file);
+  });
+}
+async function imgToBlob(file){
+  var bmp=await createImageBitmap(file);
+  var s=Math.min(1,1600/Math.max(bmp.width,bmp.height));
+  var c=document.createElement("canvas");c.width=Math.round(bmp.width*s);c.height=Math.round(bmp.height*s);
+  c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+  if(bmp.close)bmp.close();
+  return toBlob(c,0.85);
+}
+async function ask(content,o){
+  o=o||{};
+  var key=getKey();if(!key)throw {code:"nokey"};
+  var res;
+  try{
+    res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",signal:o.signal,
+      headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:MODEL,max_tokens:o.max||8000,messages:[{role:"user",content:content}]})
+    });
+  }catch(e){
+    if(e&&e.name==="AbortError")throw {code:"cancelled"};
+    throw {code:"apierr",message:"تعذر الاتصال بالإنترنت. تحقق من الشبكة وحاول من جديد."};
+  }
+  var j=null;try{j=await res.json()}catch(e){}
+  if(!res.ok){
+    var em=(j&&j.error&&j.error.message)||"";
+    var m=res.status===401?"المفتاح غير صحيح. افتح مفتاح Claude API في الأعلى وأعد إدخاله.":
+      res.status===429?"تجاوزت حد الطلبات مؤقتاً. انتظر قليلاً ثم حاول.":
+      res.status===413?"حجم الملفات كبير. جرّب ملفاً أصغر أو عدداً أقل.":
+      /credit|balance/i.test(em)?"رصيد حسابك في Anthropic غير كافٍ. أضف رصيداً من console.anthropic.com.":
+      "رفض الخادم الطلب ("+res.status+"). "+em;
+    throw {code:"apierr",message:m};
+  }
+  var text=((j&&j.content)||[]).filter(function(b){return b.type==="text"}).map(function(b){return b.text}).join("");
+  if(o.json&&j.stop_reason==="max_tokens")throw {code:"invalid_json"};
+  if(!text.trim())throw {code:"empty_completion"};
+  return text;
+}
+function parseJson(t){
+  try{return JSON.parse(t)}catch(e){}
+  var a=t.indexOf("{"),b=t.lastIndexOf("}");
+  if(a>=0&&b>a){try{return JSON.parse(t.slice(a,b+1))}catch(e){}}
+  throw {code:"invalid_json"};
+}
+
+/* ---------- analysis ---------- */
+function explainPrompt(){
+  return "You are StudyMind AI, a study assistant. The lecture material is attached above (PDF documents, lecture images and/or pasted notes, in order). Read all of it, work out the lecture topic, and write study notes ONLY from this material. Do not invent facts; skip anything unreadable.\n\n"+
+  "Reply with only one JSON object of exactly this shape:\n"+
+  '{"topic_ar":"string","topic_en":"string","ar":{"summary":"3-5 sentences","key_points":["6-10 strings"],"terms":[{"term":"string","meaning":"string"}],"questions":["4-6 review questions"]},"en":{"summary":"...","key_points":["..."],"terms":[{"term":"...","meaning":"..."}],"questions":["..."]}}\n\n'+
+  "Rules:\n- \"ar\" is written entirely in clear Modern Standard Arabic for students. Keep each technical term's Latin original in parentheses the first time it appears.\n- \"en\" is written entirely in English. It is its own explanation, not a word-for-word translation of \"ar\".\n- terms: 5 to 10 items. Keep every string short and plain.";
+}
+function mapPrompt(r){
+  return "Build a mind map of this lecture. Topic: "+r.topic_en+" / "+r.topic_ar+".\n\nArabic notes:\n"+r.ar.summary+"\n- "+r.ar.key_points.join("\n- ")+"\n\nEnglish notes:\n"+r.en.summary+"\n- "+r.en.key_points.join("\n- ")+"\n\n"+
+  'Reply with only one JSON object: {"ar":"root label","en":"root label","note_ar":"one sentence","note_en":"one sentence","children":[NODE,...]} where NODE = {"ar":"label","en":"label","note_ar":"one short sentence","note_en":"one short sentence","children":[NODE,...]}.\n'+
+  "Rules: 4 to 6 branches under the root; each branch has 2 to 4 children; leaves have no \"children\" key; at most 3 levels below the root and only where it helps; every label is at most 4 words; all \"ar\" fields in Arabic and all \"en\" fields in English.";
+}
+function cleanLang(o){
+  o=o||{};
+  var arr=function(a){return Array.isArray(a)?a.map(String).filter(Boolean):[]};
+  return {
+    summary:String(o.summary||""),
+    key_points:arr(o.key_points),
+    terms:(Array.isArray(o.terms)?o.terms:[]).filter(function(t){return t&&t.term}).map(function(t){return {term:String(t.term),meaning:String(t.meaning||"")}}),
+    questions:arr(o.questions)
+  };
+}
+async function analyze(){
+  if(busy)return;
+  var pasted=$("#pasted").value.trim();
+  if(!files.length&&!pasted){setStatus(errCopy({code:"empty"}),true);return}
+  if(!getKey()){$("#keyBox").open=true;setStatus(errCopy({code:"nokey"}),true);return}
+  ctl=new AbortController();setBusy(true);setStatus("تجهيز الملفات…");
+  try{
+    var content=[],notes=[],imgs=0;
+    for(var i=0;i<files.length;i++){
+      var f=files[i];
+      if(f.kind==="pdf"){
+        if(f.file.size>24*1048576){notes.push("bigpdf");continue}
+        setStatus("قراءة "+f.file.name+"…");
+        content.push({type:"document",title:f.file.name,source:{type:"base64",media_type:"application/pdf",data:await b64(f.file)}});
+      }else{
+        if(imgs>=10){notes.push("max");continue}
+        setStatus("تجهيز الصورة "+(imgs+1)+"…");
+        try{content.push({type:"image",source:{type:"base64",media_type:"image/jpeg",data:await b64(await imgToBlob(f.file))}});imgs++}catch(e){notes.push("bad")}
+      }
+    }
+    if(pasted)content.push({type:"text",text:"[pasted notes]\n"+pasted.slice(0,60000)});
+    if(!content.length)throw {code:"unreadable"};
+    if(ctl.signal.aborted)throw {code:"cancelled"};
+    content.push({type:"text",text:explainPrompt()});
+    setStatus("Claude يقرأ المحاضرة ويكتب الشرحين. قد يستغرق ذلك دقيقة.");
+    var raw=parseJson(await ask(content,{signal:ctl.signal,max:8000,json:true}));
+    if(!raw||!raw.ar||!raw.en)throw {code:"invalid_json"};
+    var result={topic_ar:String(raw.topic_ar||"المحاضرة"),topic_en:String(raw.topic_en||"Lecture"),ar:cleanLang(raw.ar),en:cleanLang(raw.en)};
+    if(!result.ar.key_points.length||!result.en.key_points.length)throw {code:"invalid_json"};
+    cur={result:result,map:null,demo:false,mapError:false};
+    selected=null;collapsed=new Set();fitted=false;
+    renderAll();
+    var msg="الشرح جاهز. تُبنى الخريطة الذهنية الآن…";
+    if(notes.indexOf("bigpdf")>=0)msg+=" تم تجاوز PDF أكبر من 24 ميغابايت.";
+    if(notes.indexOf("max")>=0)msg+=" استُخدمت أول 10 صور فقط.";
+    setStatus(msg);
+    await buildMap();
+    save();
+    setStatus(cur.mapError?"الشرح جاهز. تعذر بناء الخريطة، يمكنك إعادة المحاولة من تبويب الخريطة.":"تم. الشرح العربي والإنكليزي والخريطة جاهزة.");
+  }catch(e){
+    setStatus(errCopy(e),e&&e.code!=="cancelled");
+  }finally{setBusy(false);ctl=null}
+}
+async function buildMap(){
+  $("#mapRetry").hidden=true;
+  try{
+    var m=parseJson(await ask([{type:"text",text:mapPrompt(cur.result)}],{signal:ctl?ctl.signal:undefined,max:5000,json:true}));
+    if(!m||!Array.isArray(m.children)||!m.children.length)throw {code:"invalid_json"};
+    cur.map=m;cur.mapError=false;selected=null;collapsed=new Set();fitted=false;
+  }catch(e){
+    if(e&&e.code==="cancelled")throw e;
+    cur.map=null;cur.mapError=true;
+  }
+  renderMap();
+}
+$("#run").onclick=analyze;
+$("#stop").onclick=function(){if(ctl)ctl.abort()};
+$("#mapRetry").onclick=async function(){
+  if(busy||!cur.result)return;
+  ctl=new AbortController();setBusy(true);setStatus("جارٍ بناء الخريطة…");
+  try{await buildMap();save();setStatus(cur.mapError?"تعذر بناء الخريطة. حاول لاحقاً.":"الخريطة جاهزة.",cur.mapError)}
+  catch(e){setStatus(errCopy(e),e&&e.code!=="cancelled")}
+  finally{setBusy(false);ctl=null}
+};
+
+/* ---------- explanation panels ---------- */
+function renderNote(lang){
+  var r=cur.result,d=r[lang],ar=lang==="ar";
+  var L=ar?{kp:"النقاط الرئيسية",tm:"المصطلحات",q:"أسئلة للمراجعة"}:{kp:"Key points",tm:"Terms",q:"Review questions"};
+  var h='<h3>'+esc(ar?r.topic_ar:r.topic_en)+'</h3>';
+  if(d.summary)h+='<p class="lead">'+esc(d.summary)+'</p>';
+  h+='<h4>'+L.kp+'</h4><ul>'+d.key_points.map(function(p){return '<li>'+esc(p)+'</li>'}).join("")+'</ul>';
+  if(d.terms.length)h+='<h4>'+L.tm+'</h4><dl>'+d.terms.map(function(t){return '<div><dt><mark>'+esc(t.term)+'</mark></dt><dd>'+esc(t.meaning)+'</dd></div>'}).join("")+'</dl>';
+  if(d.questions.length)h+='<h4>'+L.q+'</h4><ol>'+d.questions.map(function(q){return '<li>'+esc(q)+'</li>'}).join("")+'</ol>';
+  $(ar?"#noteAr":"#noteEn").innerHTML=h;
+}
+
+/* ---------- interactive mind map ---------- */
+var byId={};
+function prep(root){
+  byId={};
+  (function walk(n,path,d,b){
+    n._id=path;n._d=d;n._b=b;byId[path]=n;
+    (n.children||[]).forEach(function(c,i){walk(c,path+"."+i,d+1,d===0?i:b)});
+  })(root,"r",0,-1);
+}
+function wrap(label,max){
+  var w=String(label||"").split(/\s+/).filter(Boolean),lines=[],cu="";
+  w.forEach(function(x){if(cu&&(cu+" "+x).length>max){lines.push(cu);cu=x}else cu=cu?cu+" "+x:x});
+  if(cu)lines.push(cu);
+  if(lines.length>3){lines.length=3;lines[2]+="…"}
+  return lines.length?lines:[""];
+}
+function layout(){
+  var W=132,GX=34,GY=10,LH=15,cy=0,maxD=0,nodes=[],edges=[];
+  (function place(n){
+    n._lines=wrap(mapLang==="ar"?n.ar:n.en,16);n._h=n._lines.length*LH+16;
+    var open=n.children&&n.children.length&&!collapsed.has(n._id);
+    if(n._d>maxD)maxD=n._d;
+    if(open){
+      n.children.forEach(place);
+      n._cy=(n.children[0]._cy+n.children[n.children.length-1]._cy)/2;
+    }else{n._cy=cy+n._h/2;cy+=n._h+GY}
+    n._x=n._d*(W+GX);
+    nodes.push(n);
+    if(open)n.children.forEach(function(c){edges.push([n,c])});
+  })(cur.map);
+  return {nodes:nodes,edges:edges,W:W,LH:LH,tw:maxD*(W+GX)+W,th:Math.max(cy-GY,40)};
+}
+function branchVar(n){return n._b<0?"--accent":"--c"+((n._b%5)+1)}
+function renderMap(){
+  var wrapEl=$("#mmWrap");
+  $("#mapRetry").hidden=!cur.mapError||busy;
+  if(!cur.map){
+    wrapEl.innerHTML='<p class="empty">'+(cur.mapError?"تعذر بناء الخريطة لهذه المحاضرة. اضغط أعد بناء الخريطة.":"لا توجد خريطة بعد.")+'</p>';
+    renderDetail();return;
+  }
+  if(!cur.map._id){
+    prep(cur.map);
+    collapsed=new Set();
+    Object.keys(byId).forEach(function(k){var n=byId[k];if(n._d>=2&&n.children&&n.children.length)collapsed.add(k)});
+  }
+  var L=layout(),rtl=mapLang==="ar",W=L.W;
+  var X=function(n){return rtl?L.tw-n._x-W:n._x};
+  var vw=L.tw+12,vh=L.th+12;
+  if(!fitted&&wrapEl.clientWidth>0){zoom=Math.max(.6,Math.min(1.25,(wrapEl.clientWidth-20)/vw));fitted=true}
+  var s='<svg class="mm" xmlns="http://www.w3.org/2000/svg" viewBox="-6 -6 '+vw+' '+vh+'" width="'+Math.round(vw*zoom)+'" height="'+Math.round(vh*zoom)+'" role="img" aria-label="'+esc(mapLang==="ar"?cur.result.topic_ar:cur.result.topic_en)+'">';
+  L.edges.forEach(function(e){
+    var p=e[0],c=e[1],x1=rtl?X(p):X(p)+W,x2=rtl?X(c)+W:X(c),xm=(x1+x2)/2;
+    s+='<path d="M'+x1+' '+p._cy+' C'+xm+' '+p._cy+' '+xm+' '+c._cy+' '+x2+' '+c._cy+'" fill="none" stroke="var('+branchVar(c)+')" stroke-width="1.6" stroke-opacity=".75"/>';
+  });
+  L.nodes.forEach(function(n){
+    var x=X(n),y=n._cy-n._h/2,col=branchVar(n),root=n._d===0,sel=selected===n._id;
+    s+='<g data-n="'+n._id+'"'+(root?' class="root"':"")+'>';
+    if(root){s+='<rect x="'+x+'" y="'+y+'" width="'+W+'" height="'+n._h+'" rx="10" fill="var(--accent)"/>'}
+    else{
+      s+='<rect x="'+x+'" y="'+y+'" width="'+W+'" height="'+n._h+'" rx="9" fill="var(--surface)"/>';
+      s+='<rect x="'+x+'" y="'+y+'" width="'+W+'" height="'+n._h+'" rx="9" fill="var('+col+')" fill-opacity="'+(n._d===1?".16":".06")+'" stroke="var('+col+')" stroke-width="'+(n._d===1?2.2:1.5)+'"/>';
+    }
+    if(sel)s+='<rect x="'+(x-3)+'" y="'+(y-3)+'" width="'+(W+6)+'" height="'+(n._h+6)+'" rx="12" fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="5 3"/>';
+    n._lines.forEach(function(t,i){
+      s+='<text x="'+(x+W/2)+'" y="'+(n._cy-(n._lines.length-1)*L.LH/2+i*L.LH)+'" text-anchor="middle" dominant-baseline="central">'+esc(t)+'</text>';
+    });
+    s+='</g>';
+    if(n.children&&n.children.length){
+      var tx=rtl?x:x+W,open=!collapsed.has(n._id);
+      s+='<g class="tg" data-t="'+n._id+'"><circle cx="'+tx+'" cy="'+n._cy+'" r="16" fill="transparent"/><circle cx="'+tx+'" cy="'+n._cy+'" r="9" fill="var(--surface)" stroke="var('+col+')" stroke-width="1.6"/><text x="'+tx+'" y="'+(n._cy+.5)+'" text-anchor="middle" dominant-baseline="central">'+(open?"−":"+")+'</text></g>';
+    }
+  });
+  s+='</svg>';
+  wrapEl.innerHTML=s;
+  renderDetail();
+}
+function renderDetail(){
+  var d=$("#detail");
+  if(!cur.map){d.innerHTML='<p class="empty">الشرح العربي والإنكليزي متاح في التبويبين الآخرين.</p>';return}
+  var n=selected&&byId[selected];
+  if(!n){d.innerHTML='<p class="empty">اضغط أي عقدة لقراءة تفاصيلها. اضغط الدائرة الصغيرة بجانبها لفتح الفرع أو طيه.</p>';return}
+  var ar=mapLang==="ar";
+  d.dir=ar?"rtl":"ltr";d.lang=ar?"ar":"en";
+  d.innerHTML='<h3>'+esc(ar?n.ar:n.en)+'</h3><p>'+esc(ar?n.note_ar:n.note_en)+'</p>'+
+    '<div><button type="button" class="ghost" id="deep"'+(busy||cur.demo?" disabled":"")+'>'+(ar?"شرح أعمق لهذا الفرع":"Explain this branch")+'</button></div><div class="deep" id="deepOut" hidden></div>';
+  if(cur.demo)$("#deep").title=ar?"متاح بعد رفع محاضرتك":"Available after you upload a lecture";
+}
+async function deepExplain(){
+  var n=selected&&byId[selected];if(!n||busy)return;
+  var ar=mapLang==="ar",out=$("#deepOut"),btn=$("#deep");
+  var path=[],p=n;
+  // collect ancestors by id prefix
+  var parts=n._id.split(".");for(var i=1;i<=parts.length;i++){var q=byId[parts.slice(0,i).join(".")];if(q)path.push(ar?q.ar:q.en)}
+  var d=cur.result[ar?"ar":"en"];
+  var prompt=(ar?"اشرح فرع الخريطة الذهنية التالي من محاضرة دراسية بالعربية الفصحى في 4 إلى 6 جمل واضحة، مع مثال واحد إن أمكن. لا تستخدم عناوين ولا جداول.":"Explain the following mind-map branch from a study lecture in English, in 4 to 6 clear sentences, with one example if possible. No headings or tables.")+
+    "\n\nTopic: "+(ar?cur.result.topic_ar:cur.result.topic_en)+"\nBranch path: "+path.join(" > ")+"\nLecture notes for context:\n"+d.summary+"\n- "+d.key_points.join("\n- ");
+  var c=new AbortController();btn.disabled=true;out.hidden=false;out.textContent=ar?"جارٍ التفكير…":"Thinking…";
+  try{
+    out.textContent=await ask([{type:"text",text:prompt}],{signal:c.signal,max:1200});
+  }catch(e){out.textContent=(e&&e.text)||errCopy(e)}
+  finally{btn.disabled=false}
+}
+
+$("#mmWrap").addEventListener("click",function(e){
+  var t=e.target.closest("[data-t]");
+  if(t){var id=t.getAttribute("data-t");if(collapsed.has(id))collapsed.delete(id);else collapsed.add(id);renderMap();return}
+  var g=e.target.closest("[data-n]");
+  if(g){selected=g.getAttribute("data-n");renderMap()}
+});
+$("#detail").addEventListener("click",function(e){if(e.target.closest("#deep"))deepExplain()});
+function setMapLang(l){
+  mapLang=l;
+  $("#mlAr").setAttribute("aria-pressed",String(l==="ar"));$("#mlEn").setAttribute("aria-pressed",String(l==="en"));
+  renderMap();
+}
+$("#mlAr").onclick=function(){setMapLang("ar")};
+$("#mlEn").onclick=function(){setMapLang("en")};
+$("#zIn").onclick=function(){zoom=Math.min(2.2,zoom*1.2);renderMap()};
+$("#zOut").onclick=function(){zoom=Math.max(.4,zoom/1.2);renderMap()};
+$("#zFit").onclick=function(){fitted=false;renderMap()};
+$("#exAll").onclick=function(){collapsed=new Set();renderMap()};
+$("#coAll").onclick=function(){
+  collapsed=new Set();
+  Object.keys(byId).forEach(function(k){var n=byId[k];if(n._d>=1&&n.children&&n.children.length)collapsed.add(k)});
+  renderMap();
+};
+
+/* ---------- save as file ---------- */
+function mdTree(n,d,ar){
+  var s=new Array(d+1).join("  ")+"- "+(ar?n.ar:n.en)+(ar?(n.note_ar?" — "+n.note_ar:""):(n.note_en?" — "+n.note_en:""))+"\n";
+  (n.children||[]).forEach(function(c){s+=mdTree(c,d+1,ar)});
+  return s;
+}
+function toMarkdown(){
+  var r=cur.result,out="# "+r.topic_en+" / "+r.topic_ar+"\n\n";
+  ["ar","en"].forEach(function(l){
+    var d=r[l],ar=l==="ar";
+    out+="## "+(ar?"الشرح بالعربية":"Explanation in English")+"\n\n"+d.summary+"\n\n### "+(ar?"النقاط الرئيسية":"Key points")+"\n"+d.key_points.map(function(p){return "- "+p}).join("\n")+"\n\n";
+    if(d.terms.length)out+="### "+(ar?"المصطلحات":"Terms")+"\n"+d.terms.map(function(t){return "- **"+t.term+"**: "+t.meaning}).join("\n")+"\n\n";
+    if(d.questions.length)out+="### "+(ar?"أسئلة للمراجعة":"Review questions")+"\n"+d.questions.map(function(q,i){return (i+1)+". "+q}).join("\n")+"\n\n";
+    if(cur.map)out+="### "+(ar?"الخريطة الذهنية":"Mind map")+"\n"+mdTree(cur.map,0,ar)+"\n";
+  });
+  return out;
+}
+$("#save").onclick=async function(){
+  var md=toMarkdown();
+  try{
+    await navigator.clipboard.writeText(md);
+    setStatus("تم النسخ. الصقه في أي تطبيق ملاحظات.");
+  }catch(e){
+    setStatus("تعذر النسخ تلقائياً من هذا الجهاز.",true);
+  }
+};
+
+/* ---------- tabs ---------- */
+function showTab(name){
+  ["ar","en","map"].forEach(function(t){
+    var tab=$("#t"+(t==="map"?"Map":t==="ar"?"Ar":"En")),panel=$("#p"+(t==="map"?"Map":t==="ar"?"Ar":"En"));
+    tab.setAttribute("aria-selected",String(t===name));panel.hidden=t!==name;
+  });
+  if(name==="map"){mapShown=true;fitted=false;renderMap()}
+}
+document.querySelector(".tabs").addEventListener("click",function(e){
+  var b=e.target.closest("[data-tab]");if(b)showTab(b.getAttribute("data-tab"));
+});
+
+function renderAll(){
+  renderNote("ar");renderNote("en");
+  $("#demoBadge").hidden=!cur.demo;
+  if(mapShown)renderMap();else{$("#mapRetry").hidden=!cur.mapError}
+}
+
+/* ---------- start ---------- */
+restore();
+renderAll();
+renderFiles();
+if(cur.map){prep(cur.map);Object.keys(byId).forEach(function(k){var n=byId[k];if(n._d>=2&&n.children&&n.children.length)collapsed.add(k)})}
+function keyUi(){
+  $("#keyBox").open=!getKey();
+  $("#keyStatus").textContent=getKey()?"المفتاح محفوظ على هذا الجوال.":"أضف مفتاح API لتبدأ.";
+}
+$("#saveKey").onclick=function(){
+  var v=$("#apiKey").value.trim();
+  if(!/^sk-ant-/.test(v)){$("#keyStatus").textContent="المفتاح يبدأ عادةً بـ sk-ant-. تحقق منه وأعد المحاولة.";return}
+  try{localStorage.setItem(KEY_STORE,v)}catch(e){}
+  $("#apiKey").value="";keyUi();
+};
+$("#clearKey").onclick=function(){try{localStorage.removeItem(KEY_STORE)}catch(e){}keyUi()};
+keyUi();
+})();
+</script>
+</body>
+</html>
